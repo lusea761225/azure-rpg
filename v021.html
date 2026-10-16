@@ -1,0 +1,261 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="theme-color" content="#11231d">
+<title>蒼境紀事 V0.2.1｜戰鬥修正版</title>
+<style>
+:root{font-family:-apple-system,BlinkMacSystemFont,"Noto Sans TC",sans-serif;color:#f9e6b3;color-scheme:dark}*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#12261c;touch-action:none;overscroll-behavior:none}button{font:inherit;color:inherit;-webkit-user-select:none;user-select:none;touch-action:manipulation}
+#game{display:block;width:100%;height:100%;height:100dvh;touch-action:none}
+#top{position:fixed;top:calc(env(safe-area-inset-top) + 8px);left:9px;right:9px;display:flex;gap:7px;justify-content:space-between;align-items:start;pointer-events:none}
+.panel{background:#14291fe8;border:1px solid #e6c7888a;border-radius:10px;box-shadow:0 3px 14px #0007;padding:7px 9px}#stats{min-width:174px;max-width:67vw}.logo{font-weight:900;letter-spacing:1px;font-size:13px}.mini{font-size:10px;color:#e8ddb6;margin-top:4px}
+.meter{height:7px;background:#314438;border:1px solid #7e8162;border-radius:6px;overflow:hidden;margin-top:5px}.meter>i{display:block;height:100%;width:100%;background:#da6356}#expfill{background:#e0b864}#summary{text-align:right;min-width:88px}#mapName{font-weight:800;font-size:12px}#saveText{font-size:10px;color:#f1dcaa;margin-top:6px}
+#toast{position:fixed;top:calc(env(safe-area-inset-top) + 103px);left:50%;transform:translateX(-50%);background:#11271de8;border:1px solid #e5c38780;border-radius:12px;padding:8px 13px;text-align:center;font-size:12px;color:#fff2d6;max-width:90vw;pointer-events:none;opacity:0;transition:opacity .25s;z-index:3}#toast.show{opacity:1}
+#joy{position:fixed;left:14px;bottom:calc(env(safe-area-inset-bottom) + 22px);width:138px;height:138px;border-radius:50%;background:#10281eae;border:2px solid #e4cc8c80;touch-action:none;user-select:none}#joy:before{content:"";position:absolute;inset:24px;border-radius:50%;border:1px solid #d2c39570}#knob{position:absolute;left:43px;top:43px;width:48px;height:48px;border-radius:50%;border:2px solid #ffe1a0;background:#977844;box-shadow:0 3px 8px #0007}
+#actions{position:fixed;right:9px;bottom:calc(env(safe-area-inset-bottom) + 17px);display:grid;grid-template-columns:repeat(3,55px);gap:6px;align-items:end}.act{min-height:49px;border-radius:12px;border:1.5px solid #f0d395a6;background:#254032e8;box-shadow:0 3px 8px #0007;font-weight:850;font-size:11px;padding:3px}.act:active{background:#a48b56}#attack{grid-column:3;grid-row:1 / 3;height:105px;border-radius:25px;background:#8d4539d9;font-size:15px}#auto{grid-column:2;grid-row:1}#skill1{grid-column:1;grid-row:1}#skill2{grid-column:1;grid-row:2}#skill3{grid-column:2;grid-row:2}#menuBtn{position:fixed;right:12px;top:calc(env(safe-area-inset-top) + 80px);background:#163226e8;border:1px solid #d8bf88a0;border-radius:11px;font-size:12px;padding:9px 11px}
+#overlay{position:fixed;inset:0;background:#06120d88;z-index:9;display:flex;align-items:center;justify-content:center;padding:18px;overflow:auto}#overlay[hidden]{display:none}#overlay,.dialog{touch-action:pan-y}.dialog{background:#1b3227;border:1px solid #e0c38b;border-radius:18px;padding:19px 16px;width:min(380px,100%);max-height:87vh;overflow:auto;box-shadow:0 14px 50px #0009}h1{font-size:22px;letter-spacing:3px;margin:0 0 4px}h2{font-size:16px;margin:15px 0 5px;color:#fff0bc}p{font-size:12px;color:#dfebdc;line-height:1.7;margin:7px 0}.note{font-size:11px;color:#dfcda1;line-height:1.6}.menuAction{display:block;width:100%;margin-top:8px;padding:12px 8px;border-radius:10px;border:1px solid #b9a271;background:#345540;font-weight:800;font-size:13px}.menuAction.primary{background:#c39e5e;color:#12291c}.menuAction.warn{border-color:#a9796b}.checkbox{display:block;font-size:12px;padding:5px}.version{font-size:11px;color:#ffd788}#intro{position:fixed;left:50%;top:46%;transform:translate(-50%,-50%);pointer-events:none;text-align:center;font-weight:900;text-shadow:0 3px 10px #000;opacity:0;transition:opacity .35s}
+@media(max-height:690px){#joy{width:112px;height:112px}#knob{left:32px;top:32px}.act{min-height:42px}#attack{height:91px}}
+</style>
+</head>
+<body>
+<canvas id="game" aria-label="蒼境紀事 V0.2 遊戲"></canvas>
+<header id="top"><div class="panel" id="stats"><div class="logo">蒼境紀事 <span class="version">V0.2.1 修正版</span></div><div class="mini" id="level">旅人　Lv.1　G 0</div><div class="meter"><i id="hpfill"></i></div><div class="mini" id="hpnum">HP 100/100</div><div class="meter"><i id="expfill"></i></div><div class="mini" id="expnum">EXP 0/100</div></div><div class="panel" id="summary"><div id="mapName">晨霧村</div><div id="saveText">尚未存檔</div></div></header>
+<div id="toast" role="status" aria-live="polite"></div><div id="intro"></div><button id="menuBtn" type="button">☰ 選單</button>
+<div id="joy" aria-label="移動搖桿"><div id="knob"></div></div>
+<div id="actions"><button class="act" id="skill1" type="button">強力斬擊</button><button class="act" id="auto" type="button">AUTO 關</button><button class="act" id="skill2" type="button">防禦姿態<br>Lv.3</button><button class="act" id="skill3" type="button">🔒　🔒</button><button class="act" id="attack" type="button">攻擊<br>⚔</button></div>
+<div id="overlay" hidden><div class="dialog"><h1>蒼境紀事</h1><div class="version">V0.2.1｜敵人戰鬥與選單修正版</div><p>已實作三張地圖、8 方向移動、三處出口、怪物、攻擊與技能、AUTO，以及獨立的 V0.2 存檔。</p><p class="note">一般選單開啟後，世界仍會持續運行，包含怪物移動與攻擊；野外請注意 HP。這是試玩原型。尚未實作全部 280 項規格，例如進階 SHA-256 匯入驗證、三類歷史備份及所有待定障礙物；不代表已完成正式 V0.2。</p>
+<h2>冒險選項（遊戲持續運作）</h2><button class="menuAction primary" id="resume">返回冒險</button><button class="menuAction" id="saveNow">立即存檔</button><button class="menuAction" id="exportNow">匯出目前試玩進度 JSON</button><button class="menuAction warn" id="resetNow">重新開始 V0.2 試玩</button><h2>AUTO 目標設定</h2><label class="checkbox"><input id="allowSlime" type="checkbox" checked> 草原：史萊姆</label><label class="checkbox"><input id="allowWolf" type="checkbox" checked> 森林：野狼</label><p class="note" id="menuInfo"></p><button class="menuAction" id="closeMenu">關閉選單</button></div></div>
+<script>
+(function(){
+'use strict';
+const TILE=48,SPEED=144,SAVE='azure_chronicle_v02_preview_1',OLD='azure_chronicle_save_v1';
+const canvas=document.getElementById('game'),ctx=canvas.getContext('2d'),el=id=>document.getElementById(id),clamp=(n,a,b)=>Math.max(a,Math.min(b,n));
+const maps={village:{name:'晨霧村',w:32,h:24},meadow:{name:'村外草原',w:48,h:32},forest:{name:'幽影森林',w:64,h:48}};
+const houses=[{x:7,y:4,w:4,h:3,n:'大廳',roof:'#a65f47'},{x:15,y:1,w:3,h:3,n:'住宅',roof:'#9e5749'},{x:24,y:3,w:3,h:3,n:'住宅',roof:'#995f4a'},{x:6,y:11,w:3,h:3,n:'住宅',roof:'#a57049'},{x:21,y:15,w:4,h:3,n:'旅館',roof:'#a35d47'}];
+const npcs=[{x:19,y:21,n:'守衛'},{x:25,y:18,n:'旅行者'},{x:11,y:9,n:'村民'}];
+const barrels=[{x:6,y:3},{x:25,y:14}],benches=[{x:13,y:8,w:2,h:1},{x:19,y:10,w:2,h:1}];
+const flowers=[{x:13,y:6,w:2,h:1},{x:13,y:11,w:2,h:1},{x:20,y:7,w:1,h:2}];
+const meadowTrees=[{x:6,y:9},{x:11,y:11},{x:7,y:14},{x:12,y:15}];
+const roads=[[0,4,22,24],[5,5,21,23],[6,7,21,22],[8,9,20,22],[10,10,19,21],[11,11,20,22],[12,12,21,23],[13,13,22,23],[14,14,23,25],[15,15,24,26],[16,16,25,26],[17,17,26,28],[18,18,27,29],[19,19,28,30],[20,21,28,30],[22,23,27,29],[24,24,27,28],[25,26,26,28],[27,27,26,27],[28,31,25,27]];
+const entrances={village:{south:[15,17]},meadow:{north:[22,24],south:[25,27]},forest:{north:[30,32]}};
+let hero={map:'village',x:17.5,y:7.5,lv:1,exp:0,hp:100,gold:0,facing:0};let prefs={slime:true,wolf:true};
+let mobs=[],auto=false,autoWaiting=false,path=[],attackCd=0,skillCd=0,guardCd=0,guardTime=0,transition=0,cooldown=0,exitReady=true,lastFrame=0,dirty=false,elapsedSave=0,paused=false,savingError=false;
+let width=0,height=0,scale=1,dpr=1,camX=0,camY=0,joyX=0,joyY=0,joyPointer=null,toastTimeout=0,heroHit=0;let combatFx=[];
+function rand(x,y,s){const a=Math.sin(x*127.1+y*311.7+s*91.3)*43758.5453;return a-Math.floor(a)}
+function maxHP(){return 100+5*(hero.lv-1)}
+function needXP(){const l=hero.lv-1;return 100+40*l+10*l*l}
+function cell(x,y){return {x:Math.floor(x),y:Math.floor(y)}}
+function insideRect(x,y,r){return x>=r.x&&x<r.x+(r.w||1)&&y>=r.y&&y<r.y+(r.h||1)}
+function tileRoad(id,x,y){
+ if(id==='village'){
+  if(x>=13&&x<=20&&y>=6&&y<=11)return true;
+  if(x>=15&&x<=17&&y>=12&&y<=23)return true;
+  if(x>=15&&x<=16&&y>=4&&y<=5)return true;
+  if(x>=21&&x<=25&&y>=7&&y<=8)return true;
+  if(x>=24&&x<=25&&y>=6&&y<=8)return true;
+  if(x>=11&&x<=12&&y>=5&&y<=8)return true;
+  if(x>=9&&x<=12&&y>=10&&y<=11)return true;
+  if(x>=9&&x<=10&&y>=10&&y<=13)return true;
+  if(x>=18&&x<=20&&y>=19&&y<=20)return true;
+  if(x>=19&&x<=20&&y>=18&&y<=20)return true;
+  if(x>=20&&x<=23&&y>=18&&y<=19)return true;
+  return false;
+ }
+ if(id==='meadow'){for(const a of roads)if(y>=a[0]&&y<=a[1]&&x>=a[2]&&x<=a[3])return true;return false}
+ if(id==='forest')return Math.abs(x-31-Math.round(Math.sin(y/7)*5))<=1;
+ return false;
+}
+function blocked(id,x,y){
+ const m=maps[id];if(x<0||y<0||x>=m.w||y>=m.h)return true;
+ if(id==='village'){
+  for(const a of houses)if(insideRect(x,y,a))return true;
+  for(const a of benches)if(insideRect(x,y,a))return true;
+  for(const a of barrels)if(a.x===x&&a.y===y)return true;
+  for(const a of npcs)if(a.x===x&&a.y===y)return true;
+ }
+ if(id==='meadow')for(const a of meadowTrees)if(a.x===x&&a.y===y)return true;
+ return false;
+}
+function freeAt(id,x,y){const r=.18;for(const p of [[-r,-r],[r,-r],[-r,r],[r,r]]){const c=cell(x+p[0],y+p[1]);if(blocked(id,c.x,c.y))return false}return true}
+function say(t){const e=el('toast');e.textContent=t;e.classList.add('show');clearTimeout(toastTimeout);toastTimeout=setTimeout(()=>e.classList.remove('show'),2200)}
+function intro(t){const e=el('intro');e.textContent=t;e.style.opacity='1';setTimeout(()=>e.style.opacity='0',1500)}
+function saveGame(){
+ try{const snap={format:'azure-rpg-preview',schema:1,savedAt:new Date().toISOString(),hero:{map:hero.map,x:hero.x,y:hero.y,lv:hero.lv,exp:hero.exp,hp:hero.hp,gold:hero.gold},prefs:prefs};
+  localStorage.setItem(SAVE,JSON.stringify(snap));dirty=false;elapsedSave=0;savingError=false;el('saveText').textContent='✓ 已存檔';return true;
+ }catch(e){savingError=true;el('saveText').textContent='⚠ 儲存失敗';say('存檔失敗，請嘗試匯出備份');return false}
+}
+function restore(){
+ try{const raw=localStorage.getItem(SAVE);if(raw){const d=JSON.parse(raw),h=d.hero;
+  if(d.format==='azure-rpg-preview'&&h&&maps[h.map]&&Number.isFinite(h.x)&&Number.isFinite(h.y)){
+   hero.map=h.map;hero.x=h.x;hero.y=h.y;hero.lv=clamp(Math.floor(h.lv)||1,1,20);hero.exp=clamp(Number(h.exp)||0,0,999999);hero.hp=clamp(Number(h.hp)||maxHP(),1,maxHP());hero.gold=Math.max(0,Math.floor(h.gold)||0);
+   if(!freeAt(hero.map,hero.x,hero.y)){hero.map='village';hero.x=17.5;hero.y=7.5}
+   if(d.prefs)prefs={slime:d.prefs.slime!==false,wolf:d.prefs.wolf!==false};return '已讀取 V0.2 試玩進度';
+  }
+ }}catch(e){savingError=true;el('saveText').textContent='⚠ 讀取失敗';return 'V0.2 存檔有誤，已使用安全出生點'}
+ try{if(localStorage.getItem(OLD))return '偵測到 V0.1 存檔：原始進度已保留，V0.2 從村莊開始'}catch(e){}
+ return '從晨霧村開始冒險';
+}
+function exportGame(){
+ try{const snap={format:'azure-rpg-preview',schema:1,savedAt:new Date().toISOString(),hero:hero,prefs:prefs,notice:'V0.2 首版試玩存檔；進階驗證與匯入還原功能尚未開放。'};
+  const blob=new Blob([JSON.stringify(snap,null,2)],{type:'application/json'}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download='蒼境紀事-v02-試玩-Lv'+hero.lv+'.json';document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),5000);say('已嘗試匯出；請確認 iPhone 下載項目');
+ }catch(e){say('匯出失敗，請稍後重試')}
+}
+function openMenu(){joyX=0;joyY=0;el('knob').style.transform='translate(0,0)';el('allowSlime').checked=prefs.slime;el('allowWolf').checked=prefs.wolf;el('menuInfo').textContent='V0.1.0 原版及舊存檔未修改。V0.2 試玩版使用獨立存檔。'+(savingError?'目前有存檔錯誤，請重試或匯出。':'');el('overlay').hidden=false}
+function closeMenu(){el('overlay').hidden=true;lastFrame=0;if(dirty)saveGame()}
+function resize(){dpr=Math.min(window.devicePixelRatio||1,2);width=innerWidth;height=innerHeight;canvas.width=Math.round(width*dpr);canvas.height=Math.round(height*dpr);canvas.style.width=width+'px';canvas.style.height=height+'px';scale=Math.max(.75,Math.min(1.2,width/390));ctx.setTransform(dpr,0,0,dpr,0,0)}
+function validMonsterSpot(id,x,y){if(!freeAt(id,x,y))return false;const zones=id==='meadow'?[[23.5,.5],[26.5,31.5]]:[[31.5,.5]];return zones.every(p=>Math.hypot(x-p[0],y-p[1])>6)}
+function spawn(){
+ mobs=[];if(hero.map==='village')return;
+ const type=hero.map==='meadow'?'slime':'wolf',lv=type==='slime'?2:8,m=maps[hero.map],amount=type==='slime'?7:6;
+ for(let i=0;i<amount;i++)for(let t=0;t<120;t++){
+  const x=2+Math.floor(Math.random()*(m.w-4))+.5,y=4+Math.floor(Math.random()*(m.h-8))+.5;
+  if(!validMonsterSpot(hero.map,x,y)||Math.hypot(x-hero.x,y-hero.y)<5||mobs.some(p=>Math.hypot(x-p.x,y-p.y)<3))continue;
+  mobs.push({id:i,type:type,lv:lv,x:x,y:y,hp:type==='slime'?42:90,max:type==='slime'?42:90,cd:1,spawn:0,ang:Math.random()*6,provoked:false,attackFx:0,hitFx:0});break;
+ }
+}
+function changeMap(id,idx,posY){
+ const old=hero.map;hero.map=id;hero.x=(id==='village'?15+idx:id==='meadow'?(old==='village'?22+idx:25+idx):30+idx)+.5;hero.y=posY+.5;
+ path=[];auto=false;autoWaiting=false;el('auto').textContent='AUTO 關';cooldown=2;exitReady=false;transition=.4;dirty=true;spawn();intro(maps[id].name);saveGame();
+}
+function stepMove(dx,dy,dt){
+ if(!dx&&!dy)return false;let len=Math.hypot(dx,dy);if(len>1){dx/=len;dy/=len}
+ const nx=hero.x+dx*SPEED/TILE*dt,ny=hero.y+dy*SPEED/TILE*dt,m=maps[hero.map];
+ if((ny>=m.h-.5&&dy>0)||(ny<=.5&&dy<0)){
+  const edge=dy>0?'south':'north',ex=entrances[hero.map][edge],ix=Math.floor(hero.x);
+  if(ex&&ix>=ex[0]&&ix<=ex[1]&&cooldown<=0&&exitReady){const i=ix-ex[0];
+   if(hero.map==='village'&&edge==='south')changeMap('meadow',i,3);
+   else if(hero.map==='meadow'&&edge==='north')changeMap('village',i,21);
+   else if(hero.map==='meadow'&&edge==='south')changeMap('forest',i,3);
+   else if(hero.map==='forest'&&edge==='north')changeMap('meadow',i,29);
+   return true;
+  }
+ }
+ if(freeAt(hero.map,nx,hero.y))hero.x=nx;
+ if(freeAt(hero.map,hero.x,ny))hero.y=ny;
+ hero.facing=Math.atan2(dy,dx);dirty=true;return true;
+}
+function findPath(sx,sy,tx,ty){
+ const m=maps[hero.map],start=cell(sx,sy),dest=cell(tx,ty);if(blocked(hero.map,dest.x,dest.y))return [];
+ const key=(x,y)=>y*m.w+x,ss=key(start.x,start.y),dd=key(dest.x,dest.y);if(ss===dd)return [];
+ const open=[{x:start.x,y:start.y,f:0}],from=new Map(),g=new Map([[ss,0]]),closed=new Set(),dirs=[[1,0],[-1,0],[0,1],[0,-1],[1,1],[-1,1],[1,-1],[-1,-1]];let tries=0;
+ while(open.length&&tries++<m.w*m.h*2){
+  open.sort((a,b)=>a.f-b.f);const v=open.shift(),k=key(v.x,v.y);if(closed.has(k))continue;
+  if(k===dd){const res=[];let u=dd;while(u!==ss&&from.has(u)){res.push({x:u%m.w+.5,y:Math.floor(u/m.w)+.5});u=from.get(u)}return res.reverse()}
+  closed.add(k);
+  for(const d of dirs){const x=v.x+d[0],y=v.y+d[1],kk=key(x,y);if(blocked(hero.map,x,y)||closed.has(kk))continue;
+   if(d[0]&&d[1]&&(blocked(hero.map,v.x+d[0],v.y)||blocked(hero.map,v.x,v.y+d[1])))continue;
+   const newG=g.get(k)+(d[0]&&d[1]?1.414:1);
+   if(newG<(g.get(kk)===undefined?Infinity:g.get(kk))){g.set(kk,newG);from.set(kk,k);open.push({x:x,y:y,f:newG+Math.hypot(dest.x-x,dest.y-y)})}
+  }
+ }
+ return [];
+}
+function followPath(dt){if(!path.length)return false;const a=path[0],dx=a.x-hero.x,dy=a.y-hero.y,d=Math.hypot(dx,dy);if(d<.13){path.shift();return true}stepMove(dx/d,dy/d,Math.min(dt,d*TILE/SPEED));return true}
+function closest(radius){let best=null,b=radius;for(const a of mobs)if(a.hp>0){const d=Math.hypot(hero.x-a.x,hero.y-a.y);if(d<b){best=a;b=d}}return best}
+function gain(exp,gold){hero.exp+=exp;hero.gold+=gold;while(hero.lv<20&&hero.exp>=needXP()){hero.exp-=needXP();hero.lv++;hero.hp=maxHP();say('升級！目前 Lv.'+hero.lv)}if(hero.lv===20)hero.exp=0;dirty=true}
+function attack(power){
+ if(attackCd>0)return false;const m=closest(1.8);if(!m){say('附近沒有可攻擊的怪物');return false}
+ const damage=(10+Math.floor(Math.random()*6)+Math.floor((hero.lv-1)/2))*power;m.hp-=damage;m.provoked=true;m.hitFx=.23;combatFx.push({x:m.x,y:m.y-.55,n:'-'+damage,t:.85,color:'#ffde96'});attackCd=.8;hero.facing=Math.atan2(m.y-hero.y,m.x-hero.x);
+ if(m.hp<=0){m.hp=0;m.spawn=7;gain(m.type==='slime'?30:90,m.type==='slime'?5:15);say('擊敗'+(m.type==='slime'?'史萊姆':'野狼')+'，獲得經驗與金幣')}else say('造成 '+damage+' 點傷害');return true;
+}
+function skill1(){if(skillCd>0){say('強力斬擊尚未冷卻');return}if(attackCd>0){say('攻擊冷卻中');return}if(attack(2)){skillCd=5;say('強力斬擊！')}}
+function skill2(){if(hero.lv<3){say('防禦姿態需要 Lv.3');return}if(guardCd>0){say('防禦姿態尚未冷卻');return}guardTime=5;guardCd=15;say('防禦姿態啟動，5 秒內減傷 30%')}
+function revive(){hero.map='village';hero.x=17.5;hero.y=7.5;hero.hp=maxHP();auto=false;autoWaiting=false;path=[];el('auto').textContent='AUTO 關';cooldown=2;exitReady=false;spawn();intro('回到晨霧村');say('你倒下了，已在晨霧村復活；沒有經驗或金幣損失');saveGame()}
+function updateMobs(dt){
+ for(const m of mobs){
+  if(m.hp<=0){m.spawn-=dt;if(m.spawn<=0){let success=false;for(let k=0;k<80;k++){const x=2+Math.floor(Math.random()*(maps[hero.map].w-4))+.5,y=4+Math.floor(Math.random()*(maps[hero.map].h-8))+.5;
+   if(validMonsterSpot(hero.map,x,y)&&Math.hypot(x-hero.x,y-hero.y)>5){m.x=x;m.y=y;m.hp=m.max;m.cd=1;m.provoked=false;m.attackFx=0;m.hitFx=0;success=true;break}}
+   if(!success)m.spawn=3}continue}
+  m.cd=Math.max(0,m.cd-dt);
+  m.attackFx=Math.max(0,(m.attackFx||0)-dt);m.hitFx=Math.max(0,(m.hitFx||0)-dt);
+  const dist=Math.hypot(m.x-hero.x,m.y-hero.y);
+  // 野狼主動追擊，史萊姆貼身碰撞／被攻擊後會反擊。
+  // 攻擊範圍要涵蓋追擊停止距離，避免敵人卡在「不走也打不到」的死區。
+  const aggressive=(m.type==='wolf'&&cooldown<=0&&dist<5.0)||(m.provoked&&dist<5.0)||(m.type==='slime'&&dist<1.4);
+  if(aggressive&&dist<=1.38&&m.cd<=0){
+   const damage=Math.max(1,Math.ceil((m.type==='wolf'?12:4)*(guardTime>0?.7:1)));
+   hero.hp=Math.max(0,hero.hp-damage);heroHit=.28;m.attackFx=.35;
+   combatFx.push({x:hero.x,y:hero.y-.8,n:'-'+damage,t:.95,color:'#ff7979'});
+   m.cd=m.type==='wolf'?1.45:1.85;dirty=true;
+   el('hpnum').textContent='HP '+Math.ceil(hero.hp)+'/'+maxHP();
+   if(hero.hp===0){revive();return}
+  }
+  if(aggressive&&dist>1.08&&dist<5.0){
+   const speed=(m.type==='wolf'?1.35:.8)*dt;
+   const nx=m.x+(hero.x-m.x)/dist*speed,ny=m.y+(hero.y-m.y)/dist*speed;
+   if(freeAt(hero.map,nx,ny)){m.x=nx;m.y=ny}
+  }
+ }
+}
+function tick(dt){
+ if(paused||document.hidden)return;
+ heroHit=Math.max(0,heroHit-dt);for(const fx of combatFx)fx.t-=dt;combatFx=combatFx.filter(fx=>fx.t>0);
+ cooldown=Math.max(0,cooldown-dt);attackCd=Math.max(0,attackCd-dt);skillCd=Math.max(0,skillCd-dt);guardCd=Math.max(0,guardCd-dt);guardTime=Math.max(0,guardTime-dt);transition=Math.max(0,transition-dt);
+ const c=cell(hero.x,hero.y),m=maps[hero.map];if(c.y>3&&c.y<m.h-3)exitReady=true;
+ let moving=false;
+ if(joyX||joyY){path=[];auto=false;autoWaiting=false;el('auto').textContent='AUTO 關';moving=stepMove(joyX,joyY,dt)}
+ else if(auto&&hero.map!=='village'){
+  if(hero.hp<maxHP()*.2){auto=false;autoWaiting=false;el('auto').textContent='AUTO 關';say('HP 低於 20%，已結束 AUTO')}
+  else{
+   if(hero.hp<maxHP()*.5)autoWaiting=true;
+   if(autoWaiting&&hero.hp>=maxHP()*.8)autoWaiting=false;
+   if(!autoWaiting&&prefs[hero.map==='meadow'?'slime':'wolf']){
+    const target=closest(99);if(target&&Math.hypot(hero.x-target.x,hero.y-target.y)<1.8){path=[];if(attackCd<=0)attack(1)}
+    else if(target){if(!path.length||Math.random()<dt*.8)path=findPath(hero.x,hero.y,target.x,target.y);moving=followPath(dt)}
+   }
+  }
+ }else moving=followPath(dt);
+ if(hero.map!=='village')updateMobs(dt);
+ if(!moving&&closest(3)===null&&hero.hp<maxHP()){hero.hp=Math.min(maxHP(),hero.hp+1.5*dt);dirty=true}
+ elapsedSave+=dt;if(dirty&&elapsedSave>=60)saveGame();updateHud();
+}
+function updateHud(){el('level').textContent='旅人　Lv.'+hero.lv+'　G '+hero.gold;el('hpfill').style.width=(100*hero.hp/maxHP())+'%';el('hpnum').textContent='HP '+Math.ceil(hero.hp)+'/'+maxHP();el('expfill').style.width=(hero.lv===20?100:100*hero.exp/needXP())+'%';el('expnum').textContent=hero.lv===20?'EXP 已達最高等級':'EXP '+hero.exp+'/'+needXP();el('mapName').textContent=maps[hero.map].name;el('skill1').textContent=skillCd>0?'斬擊 '+Math.ceil(skillCd)+'s':'強力斬擊';el('skill2').innerHTML=hero.lv<3?'防禦姿態<br>Lv.3':guardCd>0?'防禦 '+Math.ceil(guardCd)+'s':'防禦姿態'}
+function paintTile(x,y,id){const n=rand(x,y,id==='forest'?9:id==='meadow'?6:3),road=tileRoad(id,x,y),px=x*TILE,py=y*TILE;ctx.fillStyle=road?(id==='village'?'#c3b192':'#b9a17c'):(id==='village'?'#88ab79':id==='meadow'?'#8dae75':'#497854');ctx.fillRect(px,py,48,48);if(n>.65&&!road){ctx.fillStyle=id==='forest'?'#629269':'#aac387';ctx.fillRect(px+5+n*10,py+8,3,5);ctx.fillRect(px+22,py+28,3,6)}if(road){ctx.fillStyle='#8f805e33';ctx.fillRect(px+3+n*25,py+19,8,3);if(id==='village'){ctx.strokeStyle='#8b806847';ctx.strokeRect(px+.5,py+.5,47,47)}}}
+function drawTree(x,y){const px=x*TILE,py=y*TILE;ctx.fillStyle='#5b4230';ctx.fillRect(px+20,py+21,9,23);ctx.fillStyle='#294b31';ctx.beginPath();ctx.arc(px+24,py+13,21,0,Math.PI*2);ctx.fill();ctx.fillStyle='#447f48';ctx.beginPath();ctx.arc(px+16,py+10,14,0,Math.PI*2);ctx.fill();ctx.fillStyle='#65a25c';ctx.beginPath();ctx.arc(px+29,py+4,11,0,Math.PI*2);ctx.fill()}
+function drawHouse(h){const x=h.x*TILE,y=h.y*TILE,w=h.w*TILE,hg=h.h*TILE;ctx.fillStyle='#554733';ctx.fillRect(x+4,y+38,w-8,hg-38);ctx.fillStyle='#d2b281';ctx.fillRect(x+9,y+62,w-18,hg-69);ctx.fillStyle=h.roof;ctx.fillRect(x,y+8,w,hg*.49);ctx.fillStyle='#e5ad76';ctx.fillRect(x+10,y+16,w-20,7);ctx.fillStyle='#614334';ctx.fillRect(x+w/2-12,y+hg-44,24,36);ctx.fillStyle='#f6e4b1';ctx.font='bold 14px sans-serif';ctx.textAlign='center';ctx.fillText(h.n,x+w/2,y+hg*.40)}
+function drawPerson(x,y,color,name){const px=x*TILE+24,py=y*TILE+24;ctx.fillStyle='#0004';ctx.beginPath();ctx.ellipse(px,py+19,12,4,0,0,Math.PI*2);ctx.fill();ctx.fillStyle='#e9c49d';ctx.fillRect(px-7,py-15,14,14);ctx.fillStyle=color;ctx.fillRect(px-10,py,20,19);ctx.fillStyle='#3c302a';ctx.fillRect(px-8,py-19,16,6);if(name){ctx.textAlign='center';ctx.font='11px sans-serif';ctx.fillStyle='#fff3c6';ctx.fillText(name,px,py-24)}}
+function drawMob(m){if(m.hp<=0)return;const px=m.x*TILE,py=m.y*TILE;ctx.fillStyle='#0005';ctx.beginPath();ctx.ellipse(px,py+15,17,5,0,0,Math.PI*2);ctx.fill();if(m.type==='slime'){ctx.fillStyle='#5ecb84';ctx.beginPath();ctx.ellipse(px,py,19,16,0,Math.PI,Math.PI*2);ctx.lineTo(px+19,py+11);ctx.quadraticCurveTo(px,py+24,px-19,py+11);ctx.fill();ctx.fillStyle='#142e25';ctx.fillRect(px-8,py-2,4,6);ctx.fillRect(px+5,py-2,4,6)}else{ctx.fillStyle='#959ba9';ctx.beginPath();ctx.moveTo(px-19,py+6);ctx.lineTo(px-16,py-16);ctx.lineTo(px-7,py-10);ctx.lineTo(px+4,py-18);ctx.lineTo(px+17,py+4);ctx.lineTo(px+13,py+16);ctx.lineTo(px-14,py+16);ctx.fill();ctx.fillStyle='#d5d1cb';ctx.fillRect(px-11,py,8,6);ctx.fillStyle='#f1ce6e';ctx.fillRect(px+5,py-5,5,4)}ctx.fillStyle='#301d1e';ctx.fillRect(px-21,py-28,42,6);ctx.fillStyle=m.type==='slime'?'#61db8f':'#e37065';ctx.fillRect(px-20,py-27,40*Math.max(0,m.hp/m.max),4);
+ if(m.hitFx>0){ctx.strokeStyle='#fff0bd';ctx.lineWidth=3;ctx.beginPath();ctx.arc(px,py,22,0,Math.PI*2);ctx.stroke()}
+ if(m.attackFx>0){const a=m.attackFx/.35;ctx.strokeStyle='rgba(255,207,121,'+(a*.95)+')';ctx.lineWidth=5;ctx.beginPath();ctx.arc(px,py,28+(1-a)*13,-1.15,1.3);ctx.stroke();ctx.strokeStyle='#fff4b5';ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(px+14,py-24);ctx.lineTo(px+29,py+9);ctx.stroke()}
+}
+function render(){
+ ctx.setTransform(dpr,0,0,dpr,0,0);ctx.clearRect(0,0,width,height);const m=maps[hero.map],viewW=width/scale,viewH=height/scale;
+ camX=clamp(hero.x*TILE-viewW/2,0,Math.max(0,m.w*TILE-viewW));camY=clamp(hero.y*TILE-viewH/2,0,Math.max(0,m.h*TILE-viewH));
+ ctx.save();ctx.scale(scale,scale);ctx.translate(-camX,-camY);
+ const x1=Math.max(0,Math.floor(camX/TILE)-1),x2=Math.min(m.w,Math.ceil((camX+viewW)/TILE)+1),y1=Math.max(0,Math.floor(camY/TILE)-1),y2=Math.min(m.h,Math.ceil((camY+viewH)/TILE)+1);
+ for(let y=y1;y<y2;y++)for(let x=x1;x<x2;x++)paintTile(x,y,hero.map);
+ if(hero.map==='village'){
+  for(const f of flowers)for(let x=f.x;x<f.x+f.w;x++)for(let y=f.y;y<f.y+f.h;y++){const px=x*TILE,py=y*TILE;for(let i=0;i<4;i++){ctx.fillStyle=['#fff5e1','#eac0cf','#eddb8e'][i%3];ctx.beginPath();ctx.arc(px+9+i*10,py+12+(i*11%27),3,0,Math.PI*2);ctx.fill()}}
+  for(const b of benches){const px=b.x*TILE,py=b.y*TILE;ctx.fillStyle='#784d31';ctx.fillRect(px+2,py+12,b.w*TILE-4,24);ctx.fillStyle='#c0935b';ctx.fillRect(px+4,py+13,b.w*TILE-8,5);ctx.fillRect(px+4,py+27,b.w*TILE-8,5)}
+  for(const a of barrels){ctx.fillStyle='#7d5439';ctx.fillRect(a.x*TILE+12,a.y*TILE+9,25,30);ctx.strokeStyle='#cbaa70';ctx.strokeRect(a.x*TILE+13,a.y*TILE+10,23,28)}
+  for(const h of houses)drawHouse(h);for(const n of npcs)drawPerson(n.x,n.y,'#49677f',n.n);
+ }
+ if(hero.map==='meadow')for(const t of meadowTrees)drawTree(t.x,t.y);
+ if(hero.map==='forest')for(let y=y1;y<y2;y++)for(let x=x1;x<x2;x++)if(!tileRoad('forest',x,y)&&rand(x,y,21)>.86){ctx.fillStyle='#305d3c80';ctx.beginPath();ctx.arc(x*TILE+24,y*TILE+24,15,0,Math.PI*2);ctx.fill()}
+ for(const a of mobs)drawMob(a);
+ const px=hero.x*TILE,py=hero.y*TILE;ctx.fillStyle='#00150b8a';ctx.beginPath();ctx.ellipse(px,py+17,12,5,0,0,Math.PI*2);ctx.fill();ctx.fillStyle=guardTime>0?'#85c4f7':'#e8bd82';ctx.fillRect(px-8,py-20,16,14);ctx.fillStyle=heroHit>0?'#e97675':'#397ab8';ctx.fillRect(px-11,py-6,22,24);ctx.fillStyle='#f0d7ab';ctx.fillRect(px+8,py-4,5,16);ctx.fillStyle='#594333';ctx.fillRect(px-8,py-24,16,7);ctx.fillStyle='#f2dba8';ctx.font='bold 11px sans-serif';ctx.textAlign='center';ctx.fillText('旅人',px,py-31);if(guardTime>0){ctx.strokeStyle='#9dddff';ctx.lineWidth=3;ctx.beginPath();ctx.arc(px,py,27,0,Math.PI*2);ctx.stroke()}
+ for(const fx of combatFx){const rise=(1-fx.t/.95)*25;ctx.save();ctx.globalAlpha=Math.min(1,fx.t*1.8);ctx.textAlign='center';ctx.lineWidth=4;ctx.strokeStyle='#231a19';ctx.fillStyle=fx.color;ctx.font='bold 19px sans-serif';ctx.strokeText(fx.n,fx.x*TILE,fx.y*TILE-rise);ctx.fillText(fx.n,fx.x*TILE,fx.y*TILE-rise);ctx.restore()}
+ ctx.restore();const g=ctx.createRadialGradient(width/2,height/2,Math.min(width,height)*.2,width/2,height/2,Math.max(width,height)*.8);g.addColorStop(0,'#00000000');g.addColorStop(1,'#000d0a77');ctx.fillStyle=g;ctx.fillRect(0,0,width,height);if(transition>0){ctx.fillStyle='rgba(7,18,14,'+(transition/.4*.85)+')';ctx.fillRect(0,0,width,height)}
+}
+function frame(time){const dt=lastFrame?clamp((time-lastFrame)/1000,0,.045):0;lastFrame=time;tick(dt);render();requestAnimationFrame(frame)}
+function initControls(){
+ const joy=el('joy'),knob=el('knob');
+ function setJoy(ev){const r=joy.getBoundingClientRect(),x=ev.clientX-r.left-r.width/2,y=ev.clientY-r.top-r.height/2,len=Math.hypot(x,y),max=r.width*.34,limit=Math.min(1,len/max);joyX=len?x/len*limit:0;joyY=len?y/len*limit:0;knob.style.transform='translate('+(joyX*max)+'px,'+(joyY*max)+'px)'}
+ joy.addEventListener('pointerdown',ev=>{ev.preventDefault();joyPointer=ev.pointerId;joy.setPointerCapture(ev.pointerId);setJoy(ev)});
+ joy.addEventListener('pointermove',ev=>{if(joyPointer===ev.pointerId){ev.preventDefault();setJoy(ev)}});
+ function clear(ev){if(joyPointer===ev.pointerId){joyPointer=null;joyX=0;joyY=0;knob.style.transform='translate(0,0)'}}joy.addEventListener('pointerup',clear);joy.addEventListener('pointercancel',clear);
+ canvas.addEventListener('pointerup',ev=>{if(paused)return;const t=cell((ev.clientX/scale+camX)/TILE,(ev.clientY/scale+camY)/TILE);if(hero.map==='village'&&npcs.some(n=>n.x===t.x&&n.y===t.y)){say('此角色暫無互動功能');return}if(blocked(hero.map,t.x,t.y)){say('這裡不能通行');return}auto=false;autoWaiting=false;el('auto').textContent='AUTO 關';path=findPath(hero.x,hero.y,t.x+.5,t.y+.5)});
+ el('menuBtn').onclick=openMenu;el('resume').onclick=closeMenu;el('closeMenu').onclick=closeMenu;
+ el('saveNow').onclick=()=>{if(saveGame())say('已儲存 V0.2 試玩進度')};el('exportNow').onclick=exportGame;
+ el('resetNow').onclick=()=>{if(!confirm('確定重設 V0.2 試玩進度？不影響 V0.1.0。'))return;hero={map:'village',x:17.5,y:7.5,lv:1,exp:0,hp:100,gold:0,facing:0};auto=false;path=[];spawn();saveGame();closeMenu();say('已重新開始 V0.2 試玩')};
+ el('allowSlime').onchange=ev=>{prefs.slime=ev.target.checked;dirty=true};el('allowWolf').onchange=ev=>{prefs.wolf=ev.target.checked;dirty=true};
+ el('attack').onclick=()=>{if(!paused)attack(1)};el('skill1').onclick=()=>{if(!paused)skill1()};el('skill2').onclick=()=>{if(!paused)skill2()};el('skill3').onclick=()=>say('此技能欄尚未解鎖');
+ el('auto').onclick=()=>{if(paused)return;if(hero.map==='village'){say('安全村莊不能啟動 AUTO');return}auto=!auto;autoWaiting=false;path=[];el('auto').textContent=auto?'AUTO 開':'AUTO 關';say(auto?'已啟動 AUTO':'已關閉 AUTO')};
+ document.addEventListener('visibilitychange',()=>{if(document.hidden){auto=false;autoWaiting=false;el('auto').textContent='AUTO 關';joyX=joyY=0;if(dirty)saveGame()}else lastFrame=0});window.addEventListener('pagehide',()=>{if(dirty)saveGame()});window.addEventListener('resize',resize);
+}
+const note=restore();resize();spawn();initControls();updateHud();say(note);requestAnimationFrame(frame);
+})();
+</script>
+</body></html>
